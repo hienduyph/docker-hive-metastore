@@ -1,6 +1,6 @@
-# Hive Metastore
+# Apache Hive Metastore Standalone
 
-## Support Database
+## Support Metadata Database
 
 - MySQL
 - Postgresql
