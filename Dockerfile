@@ -1,10 +1,9 @@
-ARG OPENJDK_VERSION=11
-FROM openjdk:${OPENJDK_VERSION}-jre-slim
+FROM docker.io/eclipse-temurin:11-jre
 
-RUN apt-get update && \
-    apt-get install -y netcat procps curl && \
-    apt-get autoremove -y && \
-    apt-get clean
+RUN apt-get update \
+    && apt-get install -y netcat procps curl \
+    && apt-get autoremove -y \
+    && apt-get clean
 
 ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
@@ -12,30 +11,26 @@ RUN chmod +x /tini
 
 ENV HIVE_HOME=/opt/hive
 ENV PATH=${HIVE_HOME}/bin:${PATH}
-ENV METASTORE_VERSION=3.0.0
 
-ENV MYSQL_JAVA_VERSION=8.0.19
-ENV PG_JAVA_VERSION=42.5.1
-ARG HIVE_MIRROR=https://dlcdn.apache.org/
+ARG METASTORE_VERSION
+ENV METASTORE_VERSION=${METASTORE_VERSION:-3.1.3}
 
-
-RUN mkdir -p $HIVE_HOME && set -ex && \
-  curl -fsSL $HIVE_MIRROR/hive/hive-standalone-metastore-${METASTORE_VERSION}/hive-standalone-metastore-${METASTORE_VERSION}-bin.tar.gz | \
-  tar xz -C $HIVE_HOME --strip-components=1  && \
-  curl -L https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-${MYSQL_JAVA_VERSION}.tar.gz | tar xz -C ${HIVE_HOME}/lib --strip-components=1 && \
-  curl -L https://jdbc.postgresql.org/download/postgresql-${PG_JAVA_VERSION}.jar -o $HIVE_HOME/lib/postgresql-jdbc.jar
+RUN mkdir -p $HIVE_HOME && set -ex && export MYSQL_JAVA_VERSION=8.0.32 PG_JAVA_VERSION=42.6.0  HIVE_MIRROR=https://dlcdn.apache.org/ \
+  && curl -fsSL ${HIVE_MIRROR}/hive/hive-standalone-metastore-${METASTORE_VERSION}/hive-standalone-metastore-${METASTORE_VERSION}-bin.tar.gz | \
+  tar xz -C ${HIVE_HOME} --strip-components=1 \
+  && curl -L https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/${MYSQL_JAVA_VERSION}/mysql-connector-j-${MYSQL_JAVA_VERSION}.jar -o ${HIVE_HOME}/lib/mysql-connector-j-${MYSQL_JAVA_VERSION}.jar \
+  && curl -L https://jdbc.postgresql.org/download/postgresql-${PG_JAVA_VERSION}.jar -o ${HIVE_HOME}/lib/postgresql-jdbc.jar
 
 ENV HADOOP_VERSION=3.3.4
 ENV HADOOP_HOME=/opt/hadoop
-RUN mkdir -p $HADOOP_HOME && \
-  curl -fsSL $HIVE_MIRROR/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz | tar xz -C $HADOOP_HOME --strip-components=1
+RUN mkdir -p ${HADOOP_HOME} && export HADOOP_MIRROR=https://dlcdn.apache.org/ \
+  && curl -fsSL ${HADOOP_MIRROR}/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz | tar xz -C ${HADOOP_HOME} --strip-components=1
 
 
-ARG ICEBERG_VERSION=1.1.0
-RUN cd $HIVE_HOME/lib/ &&\
-  curl -LO https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.352/aws-java-sdk-bundle-1.12.352.jar &&\
-  curl -LO https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar &&\
-  curl -LO https://search.maven.org/remotecontent?filepath=org/apache/iceberg/iceberg-hive-runtime/${ICEBERG_VERSION}/iceberg-hive-runtime-${ICEBERG_VERSION}.jar
+RUN set -ex && cd $HIVE_HOME/lib/ && export AWS_VERSION=1.12.429 ICEBERG_VERSION=1.1.0 \
+  && curl -LO https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/${AWS_VERSION}/aws-java-sdk-bundle-${AWS_VERSION}.jar  \
+  && curl -LO https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar  \
+  && curl -LO https://search.maven.org/remotecontent?filepath=org/apache/iceberg/iceberg-hive-runtime/${ICEBERG_VERSION}/iceberg-hive-runtime-${ICEBERG_VERSION}.jar
 
 RUN groupadd -r hive --gid=1000 && \
     useradd -r -g hive --uid=1000 -d ${HIVE_HOME} hive && \
@@ -44,6 +39,9 @@ RUN groupadd -r hive --gid=1000 && \
 WORKDIR $HIVE_HOME
 EXPOSE 9083
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER hive
 ENTRYPOINT ["/tini", "--"]
-CMD []
+CMD ["/entrypoint.sh"]
