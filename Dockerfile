@@ -27,8 +27,8 @@ RUN mkdir -p ${HADOOP_HOME} && export HADOOP_MIRROR=https://dlcdn.apache.org/ \
   && curl -fsSL ${HADOOP_MIRROR}/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz | tar xz -C ${HADOOP_HOME} --strip-components=1
 
 
-RUN set -ex && cd $HIVE_HOME/lib/ && export AWS_VERSION=1.12.744 \
-  && curl -LO https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/${AWS_VERSION}/aws-java-sdk-bundle-${AWS_VERSION}.jar  \
+RUN set -ex && cd $HIVE_HOME/lib/ && export AWS_VERSION=2.26.4 \
+  && curl -Lo awssdk-bundle-${AWS_VERSION}.jar https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_VERSION}/bundle-${AWS_VERSION}.jar \
   && curl -LO https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar
 
 RUN groupadd -r hive --gid=1000 && \
