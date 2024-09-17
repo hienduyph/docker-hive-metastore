@@ -1,7 +1,7 @@
 FROM docker.io/eclipse-temurin:11-jre
 
 RUN apt-get update \
-    && apt-get install -y netcat procps curl \
+    && apt-get install -y netcat-traditional procps curl \
     && apt-get autoremove -y \
     && apt-get clean
 
