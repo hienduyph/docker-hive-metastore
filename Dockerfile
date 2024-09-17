@@ -1,5 +1,12 @@
 FROM docker.io/eclipse-temurin:11-jre
 
+ENV HIVE_HOME=/opt/hive
+ENV PATH=${HIVE_HOME}/bin:${PATH}
+
+RUN userdel ubuntu || true && groupadd  hive --gid=1000 && \
+    useradd -g hive --uid=1000 -d ${HIVE_HOME} hive -m && \
+    chown hive:hive -R ${HIVE_HOME}
+
 RUN apt-get update \
     && apt-get install -y netcat-traditional procps curl \
     && apt-get autoremove -y \
@@ -9,8 +16,6 @@ ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
-ENV HIVE_HOME=/opt/hive
-ENV PATH=${HIVE_HOME}/bin:${PATH}
 
 ARG METASTORE_VERSION
 ENV METASTORE_VERSION=${METASTORE_VERSION:-4.0.0}
@@ -31,9 +36,6 @@ RUN set -ex && cd $HIVE_HOME/lib/ && export AWS_VERSION=2.28.1 \
   && curl -Lo awssdk-bundle-${AWS_VERSION}.jar https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_VERSION}/bundle-${AWS_VERSION}.jar \
   && curl -LO https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar
 
-RUN groupadd -r hive --gid=1000 && \
-    useradd -r -g hive --uid=1000 -d ${HIVE_HOME} hive && \
-    chown hive:hive -R ${HIVE_HOME}
 
 WORKDIR $HIVE_HOME
 EXPOSE 9083
